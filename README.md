@@ -6,7 +6,10 @@ delivering the Brothers Grimm's fairy tales.
 _"He who is too well off is always longing for something new."_
 — from "The Mouse, the Bird, and the Sausage," Brothers Grimm
 
-[![Tests](https://github.com/andlo/ovos-skill-grimm-tales/actions/workflows/test.yml/badge.svg)](https://github.com/andlo/ovos-skill-grimm-tales/actions/workflows/test.yml)
+It is part of [Emkay](https://github.com/emkay-voice/emkay), OpenVoiceOS in
+the browser, and works on any [OpenVoiceOS](https://openvoiceos.org).
+
+[![Build](https://github.com/emkay-voice/ovos-skill-grimm-tales/actions/workflows/publish.yml/badge.svg)](https://github.com/emkay-voice/ovos-skill-grimm-tales/actions/workflows/publish.yml)
 [![PyPI version](https://img.shields.io/pypi/v/ovos-skill-grimm-tales.svg)](https://pypi.org/project/ovos-skill-grimm-tales/)
 
 > **This skill has no standalone voice interface.** It registers no

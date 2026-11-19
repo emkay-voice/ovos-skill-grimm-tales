@@ -1,10 +1,10 @@
 {
-  "skill_id": "ovos-skill-grimm-tales.andlo",
-  "source": "https://github.com/andlo/ovos-skill-grimm-tales",
+  "skill_id": "ovos-skill-grimm-tales.emkay-voice",
+  "source": "https://github.com/emkay-voice/ovos-skill-grimm-tales",
   "package_name": "ovos-skill-grimm-tales",
   "pip_spec": "ovos-skill-grimm-tales",
-  "license": "GPL-3.0-or-later",
-  "author": "andlo",
+  "license": "Apache-2.0",
+  "author": "emkay-voice",
   "name": "Contes de Grimm (fournisseur)",
   "description": "Contes des Frères Grimm, fournisseur pour ovos-common-reading-pipeline-plugin. Pas d'interface vocale autonome.",
   "examples": [
@@ -18,5 +18,5 @@
     "grimm",
     "provider"
   ],
-  "icon": "https://raw.githubusercontent.com/andlo/ovos-skill-grimm-tales/main/story-512.png"
+  "icon": "https://raw.githubusercontent.com/emkay-voice/ovos-skill-grimm-tales/main/story-512.png"
 }

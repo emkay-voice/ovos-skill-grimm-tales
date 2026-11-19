@@ -1,21 +1,5 @@
 """
 skill OVOS Grimm Tales
-Copyright (C) 2026  Andreas Lorensen
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
----
 
 Provider skill for ovos-common-reading-pipeline-plugin: implements the
 ovos.common_reading.* bus protocol and registers NO intents of its own.
@@ -48,7 +32,7 @@ def _user_agent():
         ver = version("ovos-skill-grimm-tales")
     except Exception:
         ver = "unknown"
-    return f"ovos-skill-grimm-tales/{ver} (+https://github.com/andlo/ovos-skill-grimm-tales)"
+    return f"ovos-skill-grimm-tales/{ver} (+https://github.com/emkay-voice/ovos-skill-grimm-tales)"
 
 
 HTTP_HEADERS = {"User-Agent": _user_agent()}
