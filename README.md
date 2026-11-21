@@ -23,23 +23,49 @@ the browser, and works on any [OpenVoiceOS](https://openvoiceos.org).
 pip install ovos-skill-grimm-tales ovos-common-reading-pipeline-plugin
 ```
 
+## Where the stories come from
+
+This provider publishes nothing itself: it finds the stories where they
+are already published, and every story says where it came from. The
+`source` of each search answer is the site the text is read from, and
+the pipeline says it after the last sentence ("And that's the end. It
+came from Wikisource.").
+
+- **[grimmstories.com](https://www.grimmstories.com/)** – on a device
+  (any OpenVoiceOS), as it always was: 8 languages here, EN, DA, DE, ES,
+  FR, IT, NL, PT. The site offers 20 languages in all; the other 12 (FI,
+  HU, VI, TR, PL, RO, RU, UK, EL, ZH, JA, KO) aren't included yet since
+  they fall outside [OVOS's actively-tracked language set](https://openvoiceos.github.io/lang-support-tracker/).
+- **[Wikisource](https://wikisource.org)** – the free library of
+  public-domain texts. A browser may not read grimmstories.com (the site
+  doesn't allow other web pages to read it), but it may read Wikisource,
+  so in a browser – [Emkay](https://github.com/emkay-voice/emkay) – the
+  stories come from Wikisource. On a device Wikisource is the fallback
+  when the site can't be reached.
+
+| Language | Wikisource edition | Stories |
+|---|---|---|
+| German | The Grimms' own last edition, [Kinder- und Haus-Märchen 1857](https://de.wikisource.org/wiki/Kinder-_und_Haus-M%C3%A4rchen_Band_1_(1857)), both volumes | about 210 |
+| English | [Grimm's Household Tales](https://en.wikisource.org/wiki/Grimm%27s_Household_Tales) (Margaret Hunt, 1884), both volumes | about 210 |
+| French | [Contes choisis des frères Grimm](https://fr.wikisource.org/wiki/Contes_choisis_des_fr%C3%A8res_Grimm) | about 40 |
+| Spanish | [Cuentos escogidos de los Hermanos Grimm](https://es.wikisource.org/wiki/Cuentos_escogidos_de_los_Hermanos_Grimm) | about 45 |
+
+Danish, Italian, Dutch and Portuguese have no Grimm collection on
+Wikisource yet that can be read aloud as it is (the Portuguese *Contos
+de Grimm* is still being translated there), so a browser has no Grimm in
+those languages. A story added to one of the
+pages above is found the next time the index is built (once a week).
+The texts on Wikisource are in the public domain; see each page for its
+edition and translator.
+
 ## Languages
-
-Sourced live from [grimmstories.com](https://www.grimmstories.com/),
-which supports 8 languages here: EN, DA, DE, ES, FR, IT, NL, PT.
-
-Grimmstories.com actually offers 20 languages total - the other 12
-(FI, HU, VI, TR, PL, RO, RU, UK, EL, ZH, JA, KO) aren't included here yet
-since they fall outside [OVOS's actively-tracked language set](https://openvoiceos.github.io/lang-support-tracker/).
-Portuguese is Grimm-only among the 8 supported here - no equivalent
-Andersen source exists in Portuguese.
 
 **This provider does not translate.** It loads only for the languages
 the installation is configured for - the device's own `lang` plus
-`secondary_langs` in `mycroft.conf` - that it supports. If none of them
-is one of the 8, it **never loads at all**: `initialize()` builds no
-index, registers no bus events, and logs a clear message rather than
-silently serving English (or any other) content.
+`secondary_langs` in `mycroft.conf` - that it has stories in (above). If
+none of them is one of those, it **never loads at all**: `initialize()`
+builds no index, registers no bus events, and logs a clear message
+rather than silently serving English (or any other) content.
 
 For each configured, supported language it builds its own story index,
 and each search is answered from the index of the language it was made
@@ -88,12 +114,14 @@ response from this provider.
 
 ## Credits
 
-Content sourced from grimmstories.com. Scraping/caching logic ported
+Stories from [grimmstories.com](https://www.grimmstories.com/) and
+[Wikisource](https://wikisource.org) and its volunteers, who transcribe
+and proofread the public-domain editions. Scraping/caching logic ported
 from [ovos-skill-fairytales](https://github.com/andlo/ovos-skill-fairytales)
-and [ovos-skill-andersen-tales](https://github.com/andlo/ovos-skill-andersen-tales).
+and [ovos-skill-andersen-tales](https://github.com/emkay-voice/ovos-skill-andersen-tales).
 
 ## Category
 **Entertainment**
 
 ## Tags
-#stories #fairytales #grimm #provider
+#stories #fairytales #grimm #provider #wikisource
