@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ovos-skill-grimm-tales"
-version = "0.2.0a1"
+version = "0.2.0"
 description = "Brothers Grimm fairy tales provider for ovos-common-reading-pipeline-plugin. No standalone voice interface."
 readme = "README.md"
 license = {text = "Apache-2.0"}

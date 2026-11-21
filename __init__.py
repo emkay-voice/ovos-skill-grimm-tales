@@ -21,6 +21,16 @@ import time
 import json
 import os
 import random
+import sys
+
+try:
+    from .wikisource import Wikisource, WikisourceError, is_wikisource
+    from .wikisource import SOURCE_NAME as WIKISOURCE_NAME
+except ImportError:  # pytest imports this file on its own, outside the package
+    from ovos_skill_grimm_tales.wikisource import Wikisource, WikisourceError, is_wikisource
+    from ovos_skill_grimm_tales.wikisource import SOURCE_NAME as WIKISOURCE_NAME
+
+PACKAGE = "ovos-skill-grimm-tales"
 
 
 def _user_agent():
@@ -29,10 +39,10 @@ def _user_agent():
     descriptive one is what sites ask automated clients to send."""
     try:
         from importlib.metadata import version
-        ver = version("ovos-skill-grimm-tales")
+        ver = version(PACKAGE)
     except Exception:
         ver = "unknown"
-    return f"ovos-skill-grimm-tales/{ver} (+https://github.com/emkay-voice/ovos-skill-grimm-tales)"
+    return f"{PACKAGE}/{ver} (+https://github.com/emkay-voice/{PACKAGE})"
 
 
 HTTP_HEADERS = {"User-Agent": _user_agent()}
@@ -89,17 +99,44 @@ COMMON_READING_VOCABULARY_GET = "ovos.common_reading.vocabulary.get"
 # supports (see ovos-common-reading-pipeline-plugin#26).
 COLLECTION_HINT_THRESHOLD = 0.85  # see ovos-common-reading-pipeline-plugin's README for why not lower
 CONTENT_TYPES = ["story", "tale"]
-SOURCE_NAME = "grimmstories.com"
+SITE_NAME = "grimmstories.com"
 
 # grimmstories.com offers 20 languages total; we only support the ones
 # also part of OVOS's actively-tracked language set (see
 # andlo/ovos-skill-fairytales#31) - 7 shared with Andersen plus
-# Portuguese (Grimm-only, no Andersen stories exist in Portuguese). This
+# Portuguese. This
 # provider does NOT translate (unlike ovos-skill-ovosblog/
 # ovos-skill-arxiv-papers) - it loads only for the configured languages
 # (lang + secondary_langs) it supports, and each request's language
 # picks the index that answers.
-SUPPORTED_LANGUAGES = {"da", "en", "de", "es", "fr", "it", "nl", "pt"}
+SITE_LANGUAGES = {"da", "en", "de", "es", "fr", "it", "nl", "pt"}
+
+# Wikisource's public-domain editions of the tales, per language: the
+# pages that link to them - the Grimms' own 1857 edition, and a book's
+# table of contents for the translations (see wikisource.py). A browser
+# may not read grimmstories.com (no CORS), but it may read Wikisource, so
+# in a browser (Emkay) the stories come from here; on a device Wikisource
+# is the fallback when the site can't be reached.
+WIKISOURCE_COLLECTIONS = {
+    "de": [("Kinder- und Haus-Märchen Band 1 (1857)", None),
+           ("Kinder- und Haus-Märchen Band 2 (1857)", None)],
+    "en": [("Grimm's Household Tales, Volume 1", None),
+           ("Grimm's Household Tales, Volume 2", None)],
+    "fr": [("Contes choisis des frères Grimm", None)],
+    "es": [("Cuentos escogidos de los Hermanos Grimm", None)],
+}
+# what those pages also link to that isn't a story
+WIKISOURCE_SKIP = {"Brüder Grimm", "Kinder- und Hausmärchen", "Kinder und Hausmärchen",
+                   "Grimm's Household Tales", "Contos para a infância",
+                   "Contos dos Irmãos Grimm"}
+
+# Pyodide, i.e. a browser: only sources a web page may read
+IN_BROWSER = sys.platform == "emscripten"
+
+# Languages this installation may serve: in a browser only those
+# Wikisource has
+SUPPORTED_LANGUAGES = set(WIKISOURCE_COLLECTIONS) if IN_BROWSER else \
+    SITE_LANGUAGES | set(WIKISOURCE_COLLECTIONS)
 
 
 
@@ -152,7 +189,7 @@ class GrimmTales(OVOSSkill):
             self.log.info(
                 f"{self.skill_id}: none of the configured languages "
                 f"{sorted(self.native_langs)} is one of "
-                f"{sorted(SUPPORTED_LANGUAGES)} that grimmstories.com supports, and "
+                f"{sorted(SUPPORTED_LANGUAGES)} it has stories in, and "
                 f"this provider does not translate - skill will stay inert "
                 f"(no bus events registered, index not built)."
             )
@@ -253,11 +290,30 @@ class GrimmTales(OVOSSkill):
             "collection": meta["collection"],
         })
 
-    def _index_cache_filename(self, lang=None):
-        return f"index_{lang or self._default_lang()}.json"
+    @property
+    def wikisource(self):
+        if "_wikisource" not in self.__dict__:
+            self.__dict__["_wikisource"] = Wikisource(PACKAGE)
+        return self.__dict__["_wikisource"]
 
-    def _read_index_cache(self, lang=None):
-        cache_file = self._index_cache_filename(lang)
+    @staticmethod
+    def _sources(lang):
+        """Where `lang`'s stories may come from, in the order to try:
+        the site first on a device, Wikisource as the fallback (and the
+        only source in a browser)."""
+        sources = []
+        if lang in SITE_LANGUAGES and not IN_BROWSER:
+            sources.append("site")
+        if lang in WIKISOURCE_COLLECTIONS:
+            sources.append("wikisource")
+        return sources
+
+    def _index_cache_filename(self, lang=None, source="site"):
+        lang = lang or self._default_lang()
+        return f"index_{lang}.json" if source == "site" else f"index_{source}_{lang}.json"
+
+    def _read_index_cache(self, lang=None, source="site"):
+        cache_file = self._index_cache_filename(lang, source)
         if not self.file_system.exists(cache_file):
             return None
         try:
@@ -267,9 +323,8 @@ class GrimmTales(OVOSSkill):
             self.log.warning(f"could not read story index cache: {e}")
             return None
 
-    def _write_index_cache(self, lang=None):
-        cache_file = self._index_cache_filename(lang)
-        index = self._state("indexes").get(lang or self._default_lang(), {})
+    def _write_index_cache(self, index, lang=None, source="site"):
+        cache_file = self._index_cache_filename(lang, source)
         try:
             with self.file_system.open(cache_file, "w") as f:
                 json.dump({"timestamp": time.time(), "index": index}, f)
@@ -277,20 +332,43 @@ class GrimmTales(OVOSSkill):
             self.log.warning(f"could not write story index cache: {e}")
 
     def refresh_index(self, force=False, lang=None):
+        """Builds `lang`'s index from the first of its sources that
+        answers (see _sources), each with its own cache."""
         lang = lang or self._default_lang()
-        indexes = self._state("indexes")
-        cached = self._read_index_cache(lang)
+        for source in self._sources(lang):
+            index = self._refresh_from(source, lang, force)
+            if index:
+                self._state("indexes")[lang] = index
+                return
+
+    def _refresh_from(self, source, lang, force):
+        cached = self._read_index_cache(lang, source)
         if not force and cached and (time.time() - cached.get("timestamp", 0)) < self.INDEX_CACHE_TTL:
-            indexes[lang] = cached.get("index", {})
-            return
+            return cached.get("index", {})
         try:
-            indexes[lang] = self.update_index(lang)
-            self._write_index_cache(lang)
+            index = self.update_index(lang) if source == "site" else self.update_wikisource_index(lang)
         except StoryFetchError as e:
-            self.log.error(f"Could not refresh story index ({lang}): {e}")
+            self.log.error(f"Could not refresh story index ({lang}, {source}): {e}")
             if cached:
                 self.log.warning("Falling back to previously cached (possibly stale) story index")
-                indexes[lang] = cached.get("index", {})
+                return cached.get("index", {})
+            return {}
+        if index:
+            self._write_index_cache(index, lang, source)
+        return index
+
+    def update_wikisource_index(self, lang=None):
+        lang = lang or self._default_lang()
+        try:
+            return self.wikisource.collection(lang, WIKISOURCE_COLLECTIONS[lang], WIKISOURCE_SKIP)
+        except WikisourceError as e:
+            raise StoryFetchError(str(e)) from e
+
+    @staticmethod
+    def _source_name(url):
+        """Where a story comes from, as the pipeline says it after the
+        last sentence ("It came from Wikisource")."""
+        return WIKISOURCE_NAME if is_wikisource(url) else SITE_NAME
 
     def get_soup(self, url):
         try:
@@ -304,6 +382,13 @@ class GrimmTales(OVOSSkill):
     def get_story(self, url):
         if url in self._story_text_cache:
             return self._story_text_cache[url]
+        if is_wikisource(url):
+            try:
+                text = "\n\n".join(self.wikisource.paragraphs(url))
+            except WikisourceError as e:
+                raise StoryFetchError(str(e)) from e
+            self._story_text_cache[url] = text
+            return text
         soup = self.get_soup(url)
         elements = soup.find_all("div", {'itemprop': ['text']})
         if not elements:
@@ -395,7 +480,7 @@ class GrimmTales(OVOSSkill):
             "title": title,
             "author": meta.get("author"),
             "collection": meta.get("collection"),
-            "source": SOURCE_NAME,
+            "source": self._source_name(index[title]),
             "confidence": confidence,
         }))
 
